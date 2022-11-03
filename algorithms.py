@@ -66,3 +66,99 @@ class Negamax:
         return max_
 
 
+class Nega_scout:
+    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: Heuristic):
+        self.board = board
+        self.color = color
+        self.depth = depth
+        self.heuristic = heuristic
+
+    def get_move(self):
+        max_move = chess.Move.null
+        max_ = float('-inf')
+        for move in self.board.legal_moves:
+            self.board.push(move)
+            score = -self.algorithm(0, float('-inf'), float('inf'))
+            self.board.pop()
+
+            if score > max_:
+                max_ = score
+                max_move = move
+
+        return max_move
+
+    def algorithm(self, depth, alpha, beta):
+        if depth == self.depth:
+            return self.heuristic.evaluate(self.color)
+        a = alpha
+        b = beta
+        i = 0
+        for move in self.board.legal_moves:
+
+            self.board.push(move)
+
+            score = -self.algorithm(depth + 1, -b, -a)
+
+            self.board.pop()
+
+            if (score > alpha and score < beta and depth < self.depth - 1 and i > 0):
+                a = -self.algorithm(depth + 1, -beta, -score)
+
+            if score > a:
+                a = score
+
+            if a >= beta:
+                return a
+
+            b = a + 1
+            i += 1
+
+        return a
+    
+class Pvs:
+    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: Heuristic):
+        self.board = board
+        self.color = color
+        self.depth = depth
+        self.heuristic = heuristic
+
+    def get_move(self):
+        max_move = chess.Move.null
+        max_ = float('-inf')
+        for move in self.board.legal_moves:
+            self.board.push(move)
+            score = -self.algorithm(0, float('-inf'), float('inf'))
+            self.board.pop()
+
+            if score > max_:
+                max_ = score
+                max_move = move
+
+        return max_move
+
+    def algorithm(self, depth, alpha, beta):
+        if depth == self.depth:
+            return self.heuristic.evaluate(self.color)
+
+        bSearchPv = True
+        for move in self.board.legal_moves:
+            self.board.push(move)
+
+            if bSearchPv:
+                score = -self.algorithm(depth + 1, -beta, -alpha)
+            else:
+                score = -self.algorithm(depth + 1, -alpha - 1, -alpha)
+
+                if score > alpha and score < beta:
+                    score = -self.algorithm(depth + 1, -beta, -alpha)
+
+            self.board.pop()
+
+            if (score >= beta):
+                return beta
+
+            if (score > alpha):
+                alpha = score
+                bSearchPv = False
+
+        return alpha
