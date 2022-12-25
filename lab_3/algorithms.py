@@ -3,31 +3,34 @@ import chess
 class heuristic:
     def __init__(self, board: chess.Board):
         self.board = board
-
-    def evaluate_сell(self, cell: int, color: chess.Color) -> int:
-        score = 0
-        if (self.board.piece_type_at(cell)==color):
-            score=score+1
-        if (self.board.color_at(cell) != color):
-            return score-1
-
-        return score  
+        self.points = {
+            chess.PAWN: 1,
+            chess.BISHOP: 3,
+            chess.KNIGHT: 4,
+            chess.ROOK: 5,
+            chess.QUEEN: 8
+        }
 
     def evaluate(self, color: chess.Color) -> int:
-        score = 0
+        white = self.board.occupied_co[chess.WHITE]
+        black = self.board.occupied_co[chess.BLACK]
+        score = self.material_balance() * (white - black)
 
-        for i in range(64):
-            score += self.evaluate_сell(chess.SQUARES[i], color)
-       
-
-        if (self.board.is_checkmate()):
-            if (self.board.turn == color):
-                score=score+(-9999)
-            else:
-                score=score+(9999)
+        if (self.board.turn != color):
+            return -score
 
         return score
-
+        
+    def material_balance(self):
+        white = self.board.occupied_co[chess.WHITE]
+        black = self.board.occupied_co[chess.BLACK]
+        return (
+            chess.popcount(white & self.board.pawns) - chess.popcount(black & self.board.pawns) +
+            3 * (chess.popcount(white & self.board.knights) - chess.popcount(black & self.board.knights)) +
+            3 * (chess.popcount(white & self.board.bishops) - chess.popcount(black & self.board.bishops)) +
+            5 * (chess.popcount(white & self.board.rooks) - chess.popcount(black & self.board.rooks)) +
+            9 * (chess.popcount(white & self.board.queens) - chess.popcount(black & self.board.queens))
+        )
 
 class Negamax:
     def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: heuristic):
@@ -67,7 +70,7 @@ class Negamax:
 
 
 class Nega_scout:
-    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: Heuristic):
+    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: heuristic):
         self.board = board
         self.color = color
         self.depth = depth
@@ -116,7 +119,7 @@ class Nega_scout:
         return a
     
 class Pvs:
-    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: Heuristic):
+    def __init__(self, board: chess.Board, color: chess.Color, depth: int, heuristic: heuristic):
         self.board = board
         self.color = color
         self.depth = depth
@@ -145,10 +148,13 @@ class Pvs:
             self.board.push(move)
 
             if bSearchPv:
+                #search with normal window
                 score = -self.algorithm(depth + 1, -beta, -alpha)
             else:
+                #search with null window
                 score = -self.algorithm(depth + 1, -alpha - 1, -alpha)
 
+                #if it failes high, do a full re-search
                 if score > alpha and score < beta:
                     score = -self.algorithm(depth + 1, -beta, -alpha)
 
